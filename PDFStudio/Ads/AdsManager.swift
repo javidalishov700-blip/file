@@ -66,7 +66,14 @@ final class AdsManager {
             if ATTrackingManager.trackingAuthorizationStatus == .notDetermined && !DemoMode.isActive {
                 _ = await ATTrackingManager.requestTrackingAuthorization()
             }
-            await gatherConsent()
+            if DemoMode.isActive {
+                // Screenshot mode: no consent popup, test banner straight away.
+                MobileAds.shared.start { [weak self] _ in
+                    Task { @MainActor in self?.canShowAds = true }
+                }
+            } else {
+                await gatherConsent()
+            }
         }
     }
 
