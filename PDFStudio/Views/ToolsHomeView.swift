@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ToolsHomeView: View {
     @State private var search = ""
-    @State private var path: [Tool] = []
+    @State private var path: [Tool] = DemoMode.screen.flatMap(Tool.init(rawValue:)).map { [$0] } ?? []
 
     private let columns = [GridItem(.adaptive(minimum: 300), spacing: 14)]
 

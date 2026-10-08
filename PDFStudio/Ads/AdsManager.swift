@@ -63,7 +63,7 @@ final class AdsManager {
         didStart = true
         Task {
             try? await Task.sleep(for: Self.attDelay)
-            if ATTrackingManager.trackingAuthorizationStatus == .notDetermined {
+            if ATTrackingManager.trackingAuthorizationStatus == .notDetermined && !DemoMode.isActive {
                 _ = await ATTrackingManager.requestTrackingAuthorization()
             }
             await gatherConsent()

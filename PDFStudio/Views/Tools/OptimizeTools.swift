@@ -2,6 +2,7 @@ import PDFKit
 import SwiftUI
 
 struct CompressToolView: View {
+    @Environment(FileStore.self) private var store
     @State private var files: [PickedPDF] = []
     @State private var level: PDFService.CompressionLevel = .recommended
 
@@ -39,6 +40,9 @@ struct CompressToolView: View {
                     return OutputFile(data: data, name: "\(name)_compressed", ext: "pdf", note: note)
                 }
             }
+        }
+        .onAppear {
+            if DemoMode.isActive && files.isEmpty { files = DemoMode.picked([DemoMode.seed(into: store)[1]]) }
         }
     }
 }

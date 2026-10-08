@@ -1,0 +1,51 @@
+name: Simulator Screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "PDFStudio/**"
+      - ".github/workflows/screenshots.yml"
+
+jobs:
+  screenshots:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Boot an iPhone simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)['devices']
+          c=[x for r,v in d.items() if 'iOS' in r for x in v if x['name'].startswith('iPhone') and 'Pro' in x['name'] and 'Max' not in x['name']]
+          print(c[-1]['udid'])")
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+      - name: Build for the simulator
+        run: |
+          set -o pipefail
+          xcodebuild -project PDFStudio.xcodeproj -scheme PDFStudio -configuration Debug \
+            -destination "id=$UDID" -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tail -5
+      - name: Capture screens
+        run: |
+          APP=$(find build/Build/Products -name "PDFStudio.app" -maxdepth 3 | head -1)
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p screenshots
+          for screen in home merge compress scan edit files settings; do
+            xcrun simctl terminate "$UDID" com.javidalishov.pdfstudio || true
+            arg="$screen"; [ "$screen" = home ] && arg="tools"
+            xcrun simctl launch "$UDID" com.javidalishov.pdfstudio -demoScreen "$arg"
+            sleep 8
+            xcrun simctl io "$UDID" screenshot "screenshots/$screen.png"
+          done
+          ls -la screenshots
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/

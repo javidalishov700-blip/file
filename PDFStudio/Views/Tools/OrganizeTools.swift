@@ -2,7 +2,9 @@ import PDFKit
 import SwiftUI
 
 struct MergeToolView: View {
+    @Environment(FileStore.self) private var store
     @State private var files: [PickedPDF] = []
+    private var demoURLs: [URL] { DemoMode.seed(into: store) }
 
     var body: some View {
         PDFToolScreen(tool: .merge, allowsMultiple: true, minimumCount: 2,
@@ -14,6 +16,9 @@ struct MergeToolView: View {
             return {
                 [try PDFService.pdf(PDFService.merge(documents), name: name)]
             }
+        }
+        .onAppear {
+            if DemoMode.isActive && files.isEmpty { files = DemoMode.picked(Array(demoURLs.prefix(3))) }
         }
     }
 }

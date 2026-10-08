@@ -2,7 +2,13 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(FileStore.self) private var store
-    @State private var tab: Tab = .tools
+    @State private var tab: Tab = {
+        switch DemoMode.screen {
+        case "files": .files
+        case "settings": .settings
+        default: .tools
+        }
+    }()
 
     enum Tab: Hashable { case tools, files, settings }
 
@@ -18,7 +24,10 @@ struct RootView: View {
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
                 .tag(Tab.settings)
         }
-        .task { AdsManager.shared.start() }
+        .task {
+            if DemoMode.isActive { DemoMode.seed(into: store); store.refresh() }
+            AdsManager.shared.start()
+        }
         .onOpenURL { url in
             // "Open in PDF Studio" from other apps: keep a copy in My Files.
             if store.importFiles([url]) > 0 { tab = .files }

@@ -6,6 +6,7 @@ import SwiftUI
 /// Entry point for "Edit PDF" and "Sign PDF".
 struct PDFEditorEntryView: View {
     let tool: Tool
+    @Environment(FileStore.self) private var store
     @State private var model: EditorModel?
     @State private var showImporter = false
     @State private var didAutoOpen = false
@@ -34,7 +35,15 @@ struct PDFEditorEntryView: View {
         .onAppear {
             if model == nil && !didAutoOpen {
                 didAutoOpen = true
-                showImporter = true
+                if DemoMode.isActive, let demo = DemoMode.picked([DemoMode.seed(into: store)[1]]).first {
+                    let editor = EditorModel(file: demo)
+                    editor.addText("Approved ✓")
+                    editor.updateSelected { $0.color = .red; $0.center = CGPoint(x: 0.68, y: 0.62) }
+                    editor.selectedID = nil
+                    model = editor
+                } else {
+                    showImporter = true
+                }
             }
         }
     }
@@ -105,7 +114,7 @@ struct PDFEditorView: View {
             }
         }
         .onAppear {
-            if signMode && !didOpenSignature {
+            if signMode && !didOpenSignature && !DemoMode.isActive {
                 didOpenSignature = true
                 showSignaturePad = true
             }

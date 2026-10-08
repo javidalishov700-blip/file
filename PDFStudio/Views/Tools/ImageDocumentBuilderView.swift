@@ -133,6 +133,13 @@ struct ImageDocumentBuilderView: View {
             add(images)
         }
         .onAppear {
+            if DemoMode.isActive && pages.isEmpty {
+                didAutoLaunch = true
+                add(DemoMode.documents.prefix(3).compactMap { doc in
+                    PDFDocument(data: DemoMode.samplePDF(title: doc.title, lines: doc.lines, pages: 1))?
+                        .page(at: 0).map { PDFService.renderImage($0, scale: 1.5) }
+                })
+            }
             if tool == .scan && canScan && pages.isEmpty && !didAutoLaunch {
                 didAutoLaunch = true
                 showScanner = true
