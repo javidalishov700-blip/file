@@ -68,7 +68,7 @@ struct ToolRunnerModifier: ViewModifier {
                     }
                 }
             }
-            .sheet(isPresented: $runner.showResults) {
+            .sheet(isPresented: $runner.showResults, onDismiss: { AdsManager.shared.taskCompleted() }) {
                 ResultView(urls: runner.results, notes: runner.notes)
             }
             .alert("Something went wrong",

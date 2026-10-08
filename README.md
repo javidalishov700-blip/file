@@ -32,12 +32,48 @@ başka uygulamalardan "PDF Studio ile aç" desteği.
 1. [App Store Connect](https://appstoreconnect.apple.com)'te yeni uygulama oluştur (aynı Bundle ID ile).
 2. Xcode → *Product › Archive* → *Distribute App* → *App Store Connect*.
 3. App Store Connect'te ekran görüntüleri, açıklama, gizlilik politikası URL'si ekle.
-   - Gizlilik: Uygulama **veri toplamıyor** (“Data Not Collected”). `PrivacyInfo.xcprivacy` dahil.
+   - Gizlilik: Belgeler cihazda kalır, ama **AdMob reklamları veri topluyor** — aşağıdaki "App Privacy" cevaplarını kullan.
    - Şifreleme sorusu: `ITSAppUsesNonExemptEncryption = NO` (yalnızca Apple'ın sistem şifrelemesi kullanılıyor).
 4. İncelemeye gönder.
 
 > Not: "iLovePDF" adı ve logosu başka bir şirkete ait; App Store'da kendi adını ve ikonunu kullan.
 > Uygulama adı `Config/Info.plist` → `CFBundleDisplayName`, ikon `PDFStudio/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png` (1024×1024).
+
+## Codemagic ile TestFlight'a otomatik gönderme (Mac gerekmez)
+
+`codemagic.yaml` → `pdf-studio-ios` workflow'u (Slice & Blast ile aynı yapı): XcodeGen ile projeyi üretir,
+build numarasını ayarlar (2024'ten beri geçen dakika), imzalar, `.ipa` yapar ve TestFlight'a yükler.
+`main` branch'ine her push'ta çalışır; Codemagic'ten elle de başlatılabilir.
+
+Bir kerelik kurulum:
+1. **Codemagic** → *Add application* → bu repo (`javidalishov700-blip/file`) → *codemagic.yaml* kullan.
+2. **App Store Connect API key**: Slice & Blast için oluşturulan `SliceBlast ASC Key` entegrasyonu hesap geneli
+   çalışır, yeni key gerekmez.
+3. **Apple Developer** → *Identifiers* → `com.javidalishov.pdfstudio` App ID'sini oluştur →
+   *Profiles* → bu ID için **App Store** provisioning profile oluştur (mevcut Distribution sertifikasıyla).
+4. **Codemagic** → *Team settings → Code signing identities → iOS provisioning profiles* → *Fetch profiles*
+   (sertifika `.p12` Slice & Blast'tan zaten yüklü).
+5. **App Store Connect** → *Apps → +* → aynı Bundle ID ile "PDF Studio" uygulamasını oluştur.
+6. Codemagic'te *Start new build* → `pdf-studio-ios`.
+
+## AdMob reklamları
+
+- **Banner**: Araçlar ve My Files ekranlarının altında.
+- **Interstitial**: Her 2. tamamlanan işlemden sonra, sonuç ekranı kapatılınca (ilk işlemde asla, en az 90 sn arayla).
+- Açılışta önce Apple **ATT** izni, sonra Google **UMP** onay formu (AB/UK kullanıcıları için GDPR). Onay yoksa
+  reklam istenmez. Ayarlar'da "Ad privacy choices" butonu (gerekiyorsa) görünür.
+- Kod: `PDFStudio/Ads/AdsManager.swift`, `BannerAdView.swift`. SDK Swift Package Manager ile geliyor.
+
+**Gerçek ID'leri ekle** — şu an Google'ın **test** ID'leri var (para kazandırmaz):
+AdMob → *Apps → Add app → iOS* → "PDF Studio" → 1 Banner + 1 Interstitial reklam birimi oluştur, sonra
+`project.yml` içinde `ADMOB_APP_ID` (`~` içeren), `ADMOB_BANNER_UNIT_ID`, `ADMOB_INTERSTITIAL_UNIT_ID` değerlerini değiştir.
+Debug build'ler her zaman test reklamı gösterir; Release build'ler bu ID'leri kullanır.
+
+**App Store Connect → App Privacy** (Google'ın önerisi, Slice & Blast ile aynı):
+- *Identifiers → Device ID*: toplanıyor, kullanıcıya bağlı **değil**, amaç **Third-Party Advertising**.
+- *Usage Data → Advertising Data*: toplanıyor, kullanıcıya bağlı **değil**, amaç **Third-Party Advertising**.
+- **Used for Tracking = Yes** (uygulama ATT izni istiyor).
+- Gizlilik politikasında AdMob, reklam kimliği ve ATT'den bahset; açıklamada "reklamsız" deme (Guideline 2.3.6).
 
 ## Proje yapısı
 
@@ -45,10 +81,12 @@ başka uygulamalardan "PDF Studio ile aç" desteği.
 project.yml                 XcodeGen proje tanımı
 Config/Info.plist           İzinler (kamera, fotoğraf), belge türleri
 PDFStudio/
+  Ads/                      AdMob (ATT + UMP onayı, banner, interstitial)
   App/                      Uygulama girişi, sekmeler
   Models/                   Araç listesi, dosya deposu
   Services/                 PDF işlemleri (PDFKit), OCR (Vision), Office/Web→PDF (WebKit), DOCX yazıcı
   Views/                    Ana ekran, My Files, Ayarlar, araç ekranları, PDF editörü
   Resources/                Assets, PrivacyInfo.xcprivacy
 .github/workflows/          Her push'ta macOS üzerinde derleme kontrolü
+codemagic.yaml              Codemagic → TestFlight
 ```

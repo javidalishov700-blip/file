@@ -18,6 +18,7 @@ struct RootView: View {
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
                 .tag(Tab.settings)
         }
+        .task { AdsManager.shared.start() }
         .onOpenURL { url in
             // "Open in PDF Studio" from other apps: keep a copy in My Files.
             if store.importFiles([url]) > 0 { tab = .files }

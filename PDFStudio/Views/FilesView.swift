@@ -43,6 +43,7 @@ struct FilesView: View {
                     .refreshable { store.refresh() }
                 }
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) { BannerAdView() }
             .navigationTitle("My Files")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {

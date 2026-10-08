@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(FileStore.self) private var store
     @Environment(\.requestReview) private var requestReview
     @State private var confirmDelete = false
+    private let ads = AdsManager.shared
 
     private var version: String {
         let info = Bundle.main.infoDictionary
@@ -18,11 +19,19 @@ struct SettingsView: View {
                     Label {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("100% on-device").font(.headline)
-                            Text("Your documents are processed on your iPhone and are never uploaded to a server.")
+                            Text("Your documents are processed on your iPhone and are never uploaded. The app is free and shows ads.")
                                 .font(.subheadline).foregroundStyle(.secondary)
                         }
                     } icon: {
                         Image(systemName: "lock.shield.fill").foregroundStyle(.green)
+                    }
+                }
+
+                if ads.privacyOptionsRequired {
+                    Section {
+                        Button("Ad privacy choices") { ads.showPrivacyOptions() }
+                    } footer: {
+                        Text("Change whether ads may use your data.")
                     }
                 }
 

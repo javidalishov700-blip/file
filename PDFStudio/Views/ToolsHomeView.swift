@@ -42,6 +42,7 @@ struct ToolsHomeView: View {
                 .padding()
             }
             .background(Color(.systemGroupedBackground))
+            .safeAreaInset(edge: .bottom, spacing: 0) { BannerAdView() }
             .navigationTitle("PDF Studio")
             .searchable(text: $search, prompt: "Search tools")
             .navigationDestination(for: Tool.self) { ToolDestination(tool: $0) }

@@ -6,6 +6,14 @@ options:
   createIntermediateGroups: true
   developmentLanguage: en
 
+packages:
+  GoogleMobileAds:
+    url: https://github.com/googleads/swift-package-manager-google-mobile-ads
+    from: "12.0.0"
+  GoogleUserMessagingPlatform:
+    url: https://github.com/googleads/swift-package-manager-google-user-messaging-platform
+    from: "3.0.0"
+
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -18,6 +26,9 @@ targets:
     platform: iOS
     sources:
       - path: PDFStudio
+    dependencies:
+      - package: GoogleMobileAds
+      - package: GoogleUserMessagingPlatform
     settings:
       base:
         PRODUCT_NAME: PDFStudio
@@ -30,6 +41,13 @@ targets:
         # Set your Apple Developer Team ID here (or pick it in Xcode > Signing & Capabilities)
         DEVELOPMENT_TEAM: ""
         ENABLE_PREVIEWS: YES
+        OTHER_LDFLAGS: ["$(inherited)", "-ObjC"]
+        # AdMob (Info.plist reads these). The defaults are Google's public TEST ids, which
+        # always fill and pay nothing. Replace them with the PDF Studio app's real ids from
+        # admob.google.com → Apps → PDF Studio (App ID uses "~", ad units use "/").
+        ADMOB_APP_ID: ca-app-pub-3940256099942544~1458002511
+        ADMOB_BANNER_UNIT_ID: ca-app-pub-3940256099942544/2435281174
+        ADMOB_INTERSTITIAL_UNIT_ID: ca-app-pub-3940256099942544/4411468910
 
 schemes:
   PDFStudio:
