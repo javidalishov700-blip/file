@@ -25,6 +25,7 @@ struct PDFEditorEntryView: View {
                         Button { showImporter = true } label: { Label("Select PDF", systemImage: "doc.badge.plus") }
                     }
                 }
+                .readableWidth()
             }
         }
         .navigationTitle(tool.title)
@@ -76,6 +77,8 @@ struct PDFEditorView: View {
                 pageControls
                 toolButtons
             }
+            .frame(maxWidth: 640)
+            .frame(maxWidth: .infinity)
             .padding(.horizontal)
             .padding(.vertical, 10)
             .background(.bar)

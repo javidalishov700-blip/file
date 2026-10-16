@@ -145,3 +145,25 @@ struct TextPrompt: Identifiable {
     var text: String
     var onSave: (String) -> Void
 }
+
+/// On iPad (regular width) forms and lists stay at a comfortable reading width, centered,
+/// instead of stretching edge to edge. iPhone layout is unchanged.
+struct ReadableWidth: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    var maxWidth: CGFloat = 720
+
+    func body(content: Content) -> some View {
+        if sizeClass == .regular {
+            content
+                .frame(maxWidth: maxWidth)
+                .frame(maxWidth: .infinity)
+                .background(Color(.systemGroupedBackground))
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    func readableWidth(_ maxWidth: CGFloat = 720) -> some View { modifier(ReadableWidth(maxWidth: maxWidth)) }
+}

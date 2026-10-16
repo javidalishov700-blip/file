@@ -75,6 +75,7 @@ struct PDFToolScreen<Options: View>: View {
                 .listRowBackground(Color.clear)
             }
         }
+        .readableWidth()
         .navigationTitle(tool.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

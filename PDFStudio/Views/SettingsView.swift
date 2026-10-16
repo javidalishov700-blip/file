@@ -50,6 +50,7 @@ struct SettingsView: View {
                     LabeledContent("Version", value: version)
                 }
             }
+            .readableWidth()
             .navigationTitle("Settings")
             .confirmationDialog("Delete all files in My Files?", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("Delete All", role: .destructive) { store.deleteAll() }

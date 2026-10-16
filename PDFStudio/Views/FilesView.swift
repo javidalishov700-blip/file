@@ -39,6 +39,7 @@ struct FilesView: View {
                                 }
                         }
                     }
+                    .readableWidth(820)
                     .searchable(text: $search, prompt: "Search files")
                     .refreshable { store.refresh() }
                 }

@@ -177,6 +177,7 @@ struct OrganizeToolView: View {
             }
         }
         .environment(\.editMode, .constant(file == nil ? .inactive : .active))
+        .readableWidth()
         .navigationTitle(Tool.organize.title)
         .navigationBarTitleDisplayMode(.inline)
         .pdfImporter(isPresented: $showImporter) { picked in

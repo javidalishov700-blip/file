@@ -178,6 +178,7 @@ struct OfficeToPDFView: View {
                 .listRowBackground(Color.clear)
             }
         }
+        .readableWidth()
         .navigationTitle(Tool.officeToPDF.title)
         .navigationBarTitleDisplayMode(.inline)
         .fileImporter(isPresented: $showImporter, allowedContentTypes: Self.types, allowsMultipleSelection: true) { result in
@@ -234,6 +235,7 @@ struct WebToPDFView: View {
                 .listRowBackground(Color.clear)
             }
         }
+        .readableWidth()
         .navigationTitle(Tool.webToPDF.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolRunner(runner)

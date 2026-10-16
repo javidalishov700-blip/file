@@ -99,6 +99,7 @@ struct ImageDocumentBuilderView: View {
             }
         }
         .environment(\.editMode, .constant(pages.isEmpty ? .inactive : .active))
+        .readableWidth()
         .navigationTitle(tool.title)
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $showScanner) {
