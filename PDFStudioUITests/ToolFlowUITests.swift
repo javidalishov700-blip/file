@@ -54,7 +54,10 @@ final class ToolFlowUITests: XCTestCase {
         let word = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Word'")).firstMatch
         XCTAssertTrue(word.waitForExistence(timeout: 10))
         word.tap()
-        app.buttons["Convert to Word"].tap()
+        let convert = app.buttons["Convert to Word"]
+        if !convert.isHittable { app.swipeUp() }
+        XCTAssertTrue(convert.waitForExistence(timeout: 5))
+        convert.tap()
         assertResult(app)
     }
 
