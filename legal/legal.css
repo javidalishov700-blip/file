@@ -1,0 +1,63 @@
+:root {
+  color-scheme: dark;
+  --bg: #0a0b12;
+  --card: #141826;
+  --line: rgba(255, 255, 255, 0.1);
+  --text: #e8ebf5;
+  --mute: #98a0bc;
+  --mint: #ff7a66;
+  --gold: #ffb27a;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+body { padding: 20px 18px 64px; }
+.wrap { max-width: 42rem; margin: 0 auto; }
+.mark {
+  display: inline-flex;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 18px;
+}
+.mark .slice { color: var(--mint); }
+.mark .blast { color: var(--gold); }
+h1 { font-size: 1.8rem; margin: 0 0 8px; letter-spacing: -0.02em; }
+.meta { color: var(--mute); font-size: 0.92rem; margin: 0 0 26px; }
+h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  margin: 2rem 0 0.6rem;
+}
+p, li { color: #d7dce6; max-width: 62ch; }
+ul { padding-left: 1.15rem; }
+li { margin: 0.35rem 0; }
+li ul { margin-top: 0.35rem; }
+.note {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin: 20px 0 28px;
+}
+.note strong { color: var(--mint); }
+.lede { font-size: 1.1rem; max-width: 60ch; }
+a { color: var(--mint); }
+.foot {
+  margin-top: 2.4rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+  color: var(--mute);
+  font-size: 0.88rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}

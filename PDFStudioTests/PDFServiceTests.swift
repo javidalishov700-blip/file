@@ -85,16 +85,25 @@ final class PDFServiceTests: XCTestCase {
     func testRenderKeepsOrientation() {
         let doc = makePDF(pages: 1)
         let page = doc.page(at: 0)!
-        let upright = PDFService.renderImage(page, scale: 0.5)
+        let upright = PDFService.renderImage(page, scale: 1)
         XCTAssertEqual(upright.size, CGSize(width: 595, height: 842))
         XCTAssertGreaterThan(darkness(upright, in: CGRect(x: 0, y: 0, width: 0.15, height: 0.1)), 0.8, "square should be top-left")
         XCTAssertLessThan(darkness(upright, in: CGRect(x: 0, y: 0.85, width: 0.15, height: 0.1)), 0.1, "page must not be upside down")
 
         // Rotated 90° clockwise, the top-left square moves to the top-right.
         page.rotation = 90
-        let rotated = PDFService.renderImage(page, scale: 0.5)
+        let rotated = PDFService.renderImage(page, scale: 1)
         XCTAssertEqual(rotated.size, CGSize(width: 842, height: 595))
-        XCTAssertGreaterThan(darkness(rotated, in: CGRect(x: 0.9, y: 0, width: 0.1, height: 0.15)), 0.8, "square should be top-right")
+        XCTAssertGreaterThan(darkness(rotated, in: CGRect(x: 0.9, y: 0, width: 0.1, height: 0.15)), 0.8, "90°: square should be top-right")
+        XCTAssertEqual(page.rotation, 90, "rendering must not change the page")
+
+        page.rotation = 180
+        let upsideDown = PDFService.renderImage(page, scale: 1)
+        XCTAssertGreaterThan(darkness(upsideDown, in: CGRect(x: 0.86, y: 0.9, width: 0.14, height: 0.1)), 0.8, "180°: square should be bottom-right")
+
+        page.rotation = 270
+        let left = PDFService.renderImage(page, scale: 1)
+        XCTAssertGreaterThan(darkness(left, in: CGRect(x: 0, y: 0.86, width: 0.1, height: 0.14)), 0.8, "270°: square should be bottom-left")
     }
 
     func testStampKeepsTextAndAddsWatermark() throws {
@@ -160,8 +169,10 @@ final class PDFServiceTests: XCTestCase {
     }
 
     func testImagesToPDFPageSizes() {
-        let portrait = UIGraphicsImageRenderer(size: CGSize(width: 300, height: 400)).image { _ in }
-        let landscape = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 300)).image { _ in }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let portrait = UIGraphicsImageRenderer(size: CGSize(width: 300, height: 400), format: format).image { _ in }
+        let landscape = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 300), format: format).image { _ in }
         let doc = PDFDocument(data: PDFService.imagesToPDF([portrait, landscape], pageSize: .a4, margin: .small))!
         XCTAssertEqual(doc.pageCount, 2)
         XCTAssertEqual(doc.page(at: 0)!.bounds(for: .mediaBox).size.width, 595.2, accuracy: 0.5)

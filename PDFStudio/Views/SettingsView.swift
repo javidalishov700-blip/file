@@ -44,6 +44,9 @@ struct SettingsView: View {
 
                 Section("About") {
                     Button("Rate PDF Studio") { requestReview() }
+                    Link("Privacy Policy", destination: Legal.privacy)
+                    Link("Terms of Use", destination: Legal.terms)
+                    Link("Support", destination: Legal.support)
                     LabeledContent("Version", value: version)
                 }
             }
@@ -55,4 +58,12 @@ struct SettingsView: View {
             }
         }
     }
+}
+
+/// Hosted on the same GitHub Pages site as Slice & Blast's legal pages (steady-site repo).
+enum Legal {
+    private static let base = "https://javidalishov700-blip.github.io/steady-site/pdfstudio/legal/"
+    static let privacy = URL(string: base + "privacy.html")!
+    static let terms = URL(string: base + "terms.html")!
+    static let support = URL(string: base + "support.html")!
 }

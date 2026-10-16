@@ -98,11 +98,23 @@ enum PDFService {
 
     /// Draws the page into a UIKit-style (top-left origin) context of the page's display size.
     static func drawPage(_ page: PDFPage, in context: CGContext, size: CGSize) {
+        // PDFKit's own handling of /Rotate when drawing into a context is not reliable, so the
+        // page is drawn unrotated and the rotation is applied here (clockwise, like viewers do).
+        let rotation = ((page.rotation % 360) + 360) % 360
+        let box = page.bounds(for: .cropBox).size
         context.saveGState()
         context.translateBy(x: 0, y: size.height)
         context.scaleBy(x: 1, y: -1)
+        switch rotation {
+        case 90: context.concatenate(CGAffineTransform(a: 0, b: -1, c: 1, d: 0, tx: 0, ty: box.width))
+        case 180: context.concatenate(CGAffineTransform(a: -1, b: 0, c: 0, d: -1, tx: box.width, ty: box.height))
+        case 270: context.concatenate(CGAffineTransform(a: 0, b: 1, c: -1, d: 0, tx: box.height, ty: 0))
+        default: break
+        }
+        page.rotation = 0
         page.transform(context, for: .cropBox)
         page.draw(with: .cropBox, to: context)
+        page.rotation = rotation
         context.restoreGState()
     }
 
