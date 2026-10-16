@@ -49,6 +49,31 @@ targets:
         ADMOB_BANNER_UNIT_ID: ca-app-pub-3940256099942544/2435281174
         ADMOB_INTERSTITIAL_UNIT_ID: ca-app-pub-3940256099942544/4411468910
 
+  PDFStudioTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PDFStudioTests
+    dependencies:
+      - target: PDFStudio
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.javidalishov.pdfstudio.tests
+
+  PDFStudioUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: PDFStudioUITests
+    dependencies:
+      - target: PDFStudio
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.javidalishov.pdfstudio.uitests
+        TEST_TARGET_NAME: PDFStudio
+
 schemes:
   PDFStudio:
     build:
@@ -56,5 +81,10 @@ schemes:
         PDFStudio: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - PDFStudioTests
+        - PDFStudioUITests
     archive:
       config: Release

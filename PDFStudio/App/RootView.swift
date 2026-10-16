@@ -26,7 +26,7 @@ struct RootView: View {
         }
         .task {
             if DemoMode.isActive { DemoMode.seed(into: store); store.refresh() }
-            AdsManager.shared.start()
+            if !DemoMode.isRunningTests { AdsManager.shared.start() }
         }
         .onOpenURL { url in
             // "Open in PDF Studio" from other apps: keep a copy in My Files.

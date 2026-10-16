@@ -118,8 +118,8 @@ enum TextExtractor {
             } else {
                 current += " " + line
             }
-            // A clearly short line ends the paragraph.
-            if Double(line.count) < Double(maxLength) * 0.6 {
+            // A clearly short line ends the paragraph — unless the word is hyphenated across lines.
+            if Double(line.count) < Double(maxLength) * 0.6 && !line.hasSuffix("-") {
                 paragraphs.append(current)
                 current = ""
             }

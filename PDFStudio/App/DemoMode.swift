@@ -14,6 +14,9 @@ enum DemoMode {
 
     static var isActive: Bool { screen != nil }
 
+    /// True inside the unit-test host, where ad prompts must not appear.
+    static var isRunningTests: Bool { ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil }
+
     static let documents: [(name: String, title: String, lines: [String])] = [
         ("Invoice March", "INVOICE #2026-031", ["Design services ........ $1,200", "Development ........... $3,400", "Hosting (12 months) ...... $240", "", "Total due: $4,840"]),
         ("Rental Contract", "RESIDENTIAL LEASE AGREEMENT", ["This agreement is made between the Landlord and the Tenant.", "1. Term: 12 months starting November 1.", "2. Rent: payable on the first day of each month.", "3. Deposit: one month's rent."]),
