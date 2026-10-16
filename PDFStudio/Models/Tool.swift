@@ -4,7 +4,7 @@ enum ToolCategory: String, CaseIterable, Identifiable {
     case scan = "Scan"
     case organize = "Organize PDF"
     case optimize = "Optimize PDF"
-    case convertTo = "Convert to PDF"
+    case convertTo = "Convert"
     case convertFrom = "Convert from PDF"
     case edit = "Edit PDF"
     case security = "PDF Security"
@@ -16,7 +16,7 @@ enum Tool: String, CaseIterable, Identifiable, Hashable {
     case scan, ocr
     case merge, split, organize, rotate
     case compress, crop
-    case imageToPDF, officeToPDF, webToPDF
+    case convert, imageToPDF, officeToPDF, webToPDF
     case pdfToImage, pdfToWord, pdfToText
     case edit, sign, watermark, pageNumbers
     case protect, unlock
@@ -33,6 +33,7 @@ enum Tool: String, CaseIterable, Identifiable, Hashable {
         case .rotate: "Rotate PDF"
         case .compress: "Compress PDF"
         case .crop: "Crop PDF"
+        case .convert: "Convert Any File"
         case .imageToPDF: "JPG to PDF"
         case .officeToPDF: "Office to PDF"
         case .webToPDF: "HTML to PDF"
@@ -58,6 +59,7 @@ enum Tool: String, CaseIterable, Identifiable, Hashable {
         case .rotate: "Rotate all pages of your PDF the way you need them."
         case .compress: "Reduce file size while keeping good quality."
         case .crop: "Trim the margins of every page."
+        case .convert: "Pick any file — PDF, photo, Word, Excel, PowerPoint, video or audio — and choose what to turn it into."
         case .imageToPDF: "Convert photos and images to PDF. Adjust page size and margins."
         case .officeToPDF: "Convert Word, Excel, PowerPoint, Pages, RTF and text files to PDF."
         case .webToPDF: "Convert any web page to PDF by pasting its URL."
@@ -83,6 +85,7 @@ enum Tool: String, CaseIterable, Identifiable, Hashable {
         case .rotate: "rotate.right"
         case .compress: "arrow.down.right.and.arrow.up.left"
         case .crop: "crop"
+        case .convert: "arrow.triangle.2.circlepath"
         case .imageToPDF: "photo.on.rectangle"
         case .officeToPDF: "doc.richtext"
         case .webToPDF: "globe"
@@ -106,6 +109,7 @@ enum Tool: String, CaseIterable, Identifiable, Hashable {
         case .imageToPDF, .pdfToImage, .webToPDF: Color(red: 0.82, green: 0.70, blue: 0.20)
         case .officeToPDF, .pdfToWord, .sign, .protect, .unlock: Color(red: 0.31, green: 0.45, blue: 0.70)
         case .pdfToText: Color(red: 0.42, green: 0.36, blue: 0.86)
+        case .convert: Color(red: 0.13, green: 0.55, blue: 0.62)
         }
     }
 
@@ -114,7 +118,7 @@ enum Tool: String, CaseIterable, Identifiable, Hashable {
         case .scan, .ocr: .scan
         case .merge, .split, .organize, .rotate: .organize
         case .compress, .crop: .optimize
-        case .imageToPDF, .officeToPDF, .webToPDF: .convertTo
+        case .convert, .imageToPDF, .officeToPDF, .webToPDF: .convertTo
         case .pdfToImage, .pdfToWord, .pdfToText: .convertFrom
         case .edit, .sign, .watermark, .pageNumbers: .edit
         case .protect, .unlock: .security

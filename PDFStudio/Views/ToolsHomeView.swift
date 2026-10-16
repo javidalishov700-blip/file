@@ -18,7 +18,10 @@ struct ToolsHomeView: View {
         NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    if search.isEmpty { scanBanner }
+                    if search.isEmpty {
+                        scanBanner
+                        convertBanner
+                    }
                     ForEach(ToolCategory.allCases) { category in
                         let tools = filtered.filter { $0.category == category }
                         if !tools.isEmpty {
@@ -47,6 +50,31 @@ struct ToolsHomeView: View {
             .searchable(text: $search, prompt: "Search tools")
             .navigationDestination(for: Tool.self) { ToolDestination(tool: $0) }
         }
+    }
+
+    private var convertBanner: some View {
+        Button { path.append(.convert) } label: {
+            HStack(spacing: 16) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 28, weight: .semibold))
+                    .frame(width: 60, height: 60)
+                    .background(.white.opacity(0.2), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Convert any file").font(.title3.bold())
+                    Text("PDF, Word, photos, video, audio → any format").font(.subheadline).opacity(0.9)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.headline)
+            }
+            .foregroundStyle(.white)
+            .padding(18)
+            .background(
+                LinearGradient(colors: [Color(red: 0.10, green: 0.45, blue: 0.55), Color(red: 0.20, green: 0.65, blue: 0.62)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing),
+                in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private var scanBanner: some View {
@@ -105,6 +133,7 @@ struct ToolDestination: View {
     var body: some View {
         switch tool {
         case .scan, .imageToPDF: ImageDocumentBuilderView(tool: tool)
+        case .convert: ConverterView()
         case .ocr: OCRToolView()
         case .merge: MergeToolView()
         case .split: SplitToolView()

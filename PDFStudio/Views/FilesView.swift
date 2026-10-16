@@ -8,6 +8,7 @@ struct FilesView: View {
     @State private var renaming: StoredFile?
     @State private var newName = ""
     @State private var showImporter = false
+    @State private var converting: StoredFile?
 
     private var filtered: [StoredFile] {
         guard !search.isEmpty else { return store.files }
@@ -37,6 +38,12 @@ struct FilesView: View {
                                     ShareLink(item: file.url) { Label("Share", systemImage: "square.and.arrow.up") }
                                         .tint(.blue)
                                 }
+                                .swipeActions(edge: .leading) {
+                                    Button { converting = file } label: {
+                                        Label("Convert", systemImage: "arrow.triangle.2.circlepath")
+                                    }
+                                    .tint(Tool.convert.color)
+                                }
                         }
                     }
                     .readableWidth(820)
@@ -63,6 +70,14 @@ struct FilesView: View {
                 }
             }
             .onAppear { store.refresh() }
+            .sheet(item: $converting) { file in
+                NavigationStack {
+                    ConverterView(initialURLs: [file.url])
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) { Button("Close") { converting = nil } }
+                        }
+                }
+            }
         }
     }
 
@@ -78,6 +93,7 @@ struct FilesView: View {
     }
 
     @ViewBuilder private func menu(_ file: StoredFile) -> some View {
+        Button { converting = file } label: { Label("Convert…", systemImage: "arrow.triangle.2.circlepath") }
         ShareLink(item: file.url) { Label("Share", systemImage: "square.and.arrow.up") }
         Button {
             newName = file.url.deletingPathExtension().lastPathComponent

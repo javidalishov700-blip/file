@@ -56,6 +56,14 @@ final class FileStore {
         return url
     }
 
+    @discardableResult
+    func move(_ source: URL, baseName: String, ext: String) throws -> URL {
+        let url = uniqueURL(baseName: baseName, ext: ext)
+        try FileManager.default.moveItem(at: source, to: url)
+        refresh()
+        return url
+    }
+
     /// Copies external files (document picker, "Open in…") into My Files. Returns the number imported.
     @discardableResult
     func importFiles(_ urls: [URL]) -> Int {

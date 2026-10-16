@@ -7,6 +7,8 @@ struct OutputFile {
     var name: String
     var ext: String
     var note: String? = nil
+    /// Large results (video, audio) are written to a temp file and moved into My Files instead of `data`.
+    var fileURL: URL? = nil
 }
 
 typealias ToolWork = @Sendable () async throws -> [OutputFile]

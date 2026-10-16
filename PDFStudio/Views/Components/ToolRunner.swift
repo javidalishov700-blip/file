@@ -22,7 +22,8 @@ final class ToolRunner {
                 var urls: [URL] = []
                 var notes: [URL: String] = [:]
                 for output in outputs {
-                    let url = try store.save(output.data, baseName: output.name, ext: output.ext)
+                    let url = try output.fileURL.map { try store.move($0, baseName: output.name, ext: output.ext) }
+                        ?? store.save(output.data, baseName: output.name, ext: output.ext)
                     urls.append(url)
                     if let note = output.note { notes[url] = note }
                 }

@@ -45,7 +45,7 @@ jobs:
             xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
             xcrun simctl install "$UDID" "$APP"
             mkdir -p "screenshots/$kind"
-            for screen in home scan merge edit compress files settings; do
+            for screen in home convert scan merge edit compress files settings; do
               xcrun simctl terminate "$UDID" com.javidalishov.pdfstudio || true
               arg="$screen"; [ "$screen" = home ] && arg="tools"
               xcrun simctl launch "$UDID" com.javidalishov.pdfstudio -demoScreen "$arg"

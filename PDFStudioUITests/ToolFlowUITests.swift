@@ -49,6 +49,15 @@ final class ToolFlowUITests: XCTestCase {
         assertResult(app)
     }
 
+    func testConvertPDFToWord() {
+        let app = launch("convert")
+        let word = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Word'")).firstMatch
+        XCTAssertTrue(word.waitForExistence(timeout: 10))
+        word.tap()
+        app.buttons["Convert to Word"].tap()
+        assertResult(app)
+    }
+
     func testResultAppearsInMyFiles() {
         let app = launch("merge")
         app.buttons["Merge PDF"].firstMatch.tap()
