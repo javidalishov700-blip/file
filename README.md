@@ -75,6 +75,19 @@ Debug build'ler her zaman test reklamı gösterir; Release build'ler bu ID'leri 
 - **Used for Tracking = Yes** (uygulama ATT izni istiyor).
 - Gizlilik politikasında AdMob, reklam kimliği ve ATT'den bahset; açıklamada "reklamsız" deme (Guideline 2.3.6).
 
+## Testler
+
+`PDFStudioTests` (her PDF aracının mantığı: birleştir, böl, döndür, sıkıştır, filigran, sayfa numarası,
+şifre, OCR, Word/DOCX, HTML→PDF, dosya kaydı) ve `PDFStudioUITests` (merge, compress, edit, scan akışları uçtan uca).
+Her push'ta GitHub Actions iPhone simülatöründe çalıştırır. Mac'te: Xcode → ⌘U.
+
+## Gizlilik politikası / Destek sayfaları
+
+`legal/` klasöründe hazır (privacy, terms, support). Slice & Blast gibi `steady-site` reposunda
+`public/pdfstudio/legal/` altına konup yayınlanınca adresler:
+`https://javidalishov700-blip.github.io/steady-site/pdfstudio/legal/privacy.html` (+ `terms.html`, `support.html`).
+Uygulamadaki Ayarlar ekranı bu adreslere bağlanıyor. App Store açıklama metinleri: `docs/STORE_LISTING.md`.
+
 ## Proje yapısı
 
 ```
