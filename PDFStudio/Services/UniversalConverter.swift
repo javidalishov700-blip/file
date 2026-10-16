@@ -6,14 +6,20 @@ import UniformTypeIdentifiers
 
 /// What a picked file is, detected from its extension and, failing that, its contents.
 enum FileKind: Equatable {
-    case pdf, image, office, text, web, video, audio, unsupported
+    case pdf, image, word, spreadsheet, presentation, office, markdown, text, table, json, web, video, audio, unsupported
 
     var title: String {
         switch self {
         case .pdf: "PDF document"
         case .image: "Image"
+        case .word: "Word document"
+        case .spreadsheet: "Excel spreadsheet"
+        case .presentation: "PowerPoint presentation"
         case .office: "Office document"
+        case .markdown: "Markdown"
         case .text: "Text document"
+        case .table: "CSV table"
+        case .json: "JSON data"
         case .web: "Web page"
         case .video: "Video"
         case .audio: "Audio"
@@ -25,8 +31,13 @@ enum FileKind: Equatable {
         switch self {
         case .pdf: "doc.fill"
         case .image: "photo.fill"
+        case .word: "doc.text.fill"
+        case .spreadsheet, .table: "tablecells.fill"
+        case .presentation: "rectangle.on.rectangle.angled.fill"
         case .office: "doc.richtext.fill"
+        case .markdown: "number"
         case .text: "doc.plaintext.fill"
+        case .json: "curlybraces"
         case .web: "globe"
         case .video: "film.fill"
         case .audio: "waveform"
@@ -36,7 +47,7 @@ enum FileKind: Equatable {
 }
 
 enum TargetFormat: String, CaseIterable, Identifiable {
-    case pdf, docx, txt, md, rtf, html, jpg, png, heic, tiff, gif, mp4, mov, m4a, wav, aiff
+    case pdf, docx, xlsx, csv, json, txt, md, rtf, html, jpg, png, heic, tiff, bmp, gif, mp4, mov, m4a, wav, aiff, caf
 
     var id: String { rawValue }
     var ext: String { rawValue }
@@ -45,10 +56,9 @@ enum TargetFormat: String, CaseIterable, Identifiable {
         switch self {
         case .pdf: "PDF"
         case .docx: "Word"
+        case .xlsx: "Excel"
         case .txt: "Text"
         case .md: "Markdown"
-        case .rtf: "RTF"
-        case .html: "HTML"
         default: rawValue.uppercased()
         }
     }
@@ -57,17 +67,21 @@ enum TargetFormat: String, CaseIterable, Identifiable {
         switch self {
         case .pdf: "doc.fill"
         case .docx: "doc.text.fill"
-        case .txt, .md: "text.alignleft"
+        case .xlsx, .csv: "tablecells"
+        case .json: "curlybraces"
+        case .txt: "text.alignleft"
+        case .md: "number"
         case .rtf: "doc.richtext"
         case .html: "chevron.left.forwardslash.chevron.right"
-        case .jpg, .png, .heic, .tiff: "photo"
+        case .jpg, .png, .heic, .tiff, .bmp: "photo"
         case .gif: "photo.stack"
         case .mp4, .mov: "film"
-        case .m4a, .wav, .aiff: "waveform"
+        case .m4a, .wav, .aiff, .caf: "waveform"
         }
     }
 
     var usesQuality: Bool { self == .jpg || self == .heic }
+    var needsTable: Bool { self == .csv || self == .xlsx || self == .json }
 
     var imageType: UTType? {
         switch self {
@@ -75,6 +89,7 @@ enum TargetFormat: String, CaseIterable, Identifiable {
         case .png: .png
         case .heic: .heic
         case .tiff: .tiff
+        case .bmp: .bmp
         case .gif: .gif
         default: nil
         }
@@ -82,23 +97,31 @@ enum TargetFormat: String, CaseIterable, Identifiable {
 }
 
 enum UniversalConverter {
-    static let officeExtensions: Set<String> = ["doc", "docx", "xls", "xlsx", "ppt", "pptx", "pages", "numbers", "key"]
-    static let textExtensions: Set<String> = ["txt", "text", "md", "markdown", "csv", "tsv", "json", "xml", "log", "rtf"]
-    static let webExtensions: Set<String> = ["html", "htm", "xhtml", "webarchive"]
+    static let extensions: [FileKind: Set<String>] = [
+        .word: ["docx", "docm", "dotx"],
+        .spreadsheet: ["xlsx", "xlsm"],
+        .presentation: ["pptx", "ppsx"],
+        .office: ["doc", "xls", "ppt", "pages", "numbers", "key"],
+        .markdown: ["md", "markdown", "mdown", "mkd"],
+        .table: ["csv", "tsv"],
+        .json: ["json", "geojson"],
+        .text: ["txt", "text", "log", "rtf", "xml", "yaml", "yml", "ini", "conf", "srt", "vtt"],
+        .web: ["html", "htm", "xhtml", "webarchive", "svg"],
+    ]
 
     // MARK: Detection
 
     static func detect(_ url: URL) -> FileKind {
         let ext = url.pathExtension.lowercased()
-        if officeExtensions.contains(ext) { return .office }
-        if webExtensions.contains(ext) { return .web }
-        if textExtensions.contains(ext) { return .text }
+        if let kind = extensions.first(where: { $0.value.contains(ext) })?.key { return kind }
         if let type = UTType(filenameExtension: ext) {
             if type.conforms(to: .pdf) { return .pdf }
             if type.conforms(to: .image) { return .image }
             if type.conforms(to: .movie) || type.conforms(to: .video) { return .video }
             if type.conforms(to: .audio) { return .audio }
             if type.conforms(to: .html) { return .web }
+            if type.conforms(to: .commaSeparatedText) { return .table }
+            if type.conforms(to: .json) { return .json }
             if type.conforms(to: .text) { return .text }
         }
         // Missing or wrong extension: look at the bytes.
@@ -106,7 +129,8 @@ enum UniversalConverter {
             defer { try? handle.close() }
             if let head = try? handle.read(upToCount: 5), head.starts(with: Array("%PDF-".utf8)) { return .pdf }
         }
-        if let source = CGImageSourceCreateWithURL(url as CFURL, nil), CGImageSourceGetCount(source) > 0 {
+        if let source = CGImageSourceCreateWithURL(url as CFURL, nil), CGImageSourceGetCount(source) > 0,
+           CGImageSourceGetStatus(source) == .statusComplete {
             return .image
         }
         return .unsupported
@@ -116,20 +140,26 @@ enum UniversalConverter {
     static func targets(for kind: FileKind, ext: String = "") -> [TargetFormat] {
         let all: [TargetFormat]
         switch kind {
-        case .pdf: all = [.docx, .jpg, .png, .txt, .md, .rtf, .html, .heic, .tiff]
-        case .image: all = [.pdf, .jpg, .png, .heic, .tiff, .gif, .txt, .docx]
-        case .office: all = [.pdf, .docx, .txt, .jpg, .png]
-        case .text: all = [.pdf, .docx, .txt, .rtf, .html, .jpg]
-        case .web: all = [.pdf, .docx, .txt, .jpg, .png]
-        case .video: all = [.mp4, .mov, .m4a, .gif]
-        case .audio: all = [.m4a, .wav, .aiff]
+        case .pdf: all = [.docx, .jpg, .png, .txt, .md, .html, .rtf, .heic, .tiff, .bmp]
+        case .image: all = [.pdf, .jpg, .png, .heic, .tiff, .bmp, .gif, .txt, .docx, .md]
+        case .word: all = [.pdf, .md, .txt, .html, .rtf, .jpg, .png]
+        case .spreadsheet: all = [.pdf, .csv, .json, .html, .md, .docx, .txt]
+        case .presentation: all = [.pdf, .docx, .md, .txt, .html, .jpg, .png]
+        case .office: all = [.pdf, .docx, .txt, .md, .jpg, .png]
+        case .markdown: all = [.pdf, .docx, .html, .rtf, .txt, .jpg, .png]
+        case .text: all = [.pdf, .docx, .md, .rtf, .html, .jpg]
+        case .table: all = [.xlsx, .json, .csv, .pdf, .docx, .html, .md, .txt]
+        case .json: all = [.csv, .xlsx, .pdf, .html, .md, .txt]
+        case .web: all = [.pdf, .docx, .md, .txt, .jpg, .png]
+        case .video: all = [.mp4, .mov, .m4a, .wav, .gif, .jpg]
+        case .audio: all = [.m4a, .wav, .aiff, .caf]
         case .unsupported: all = []
         }
         let own = ext.lowercased() == "jpeg" ? "jpg" : ext.lowercased()
         return all.filter { $0.ext != own }
     }
 
-    /// A short line such as "3 pages", "4032 × 3024", "1:24".
+    /// A short line such as "3 pages", "4032 × 3024", "1:24", "12 rows".
     static func describe(_ url: URL, kind: FileKind) async -> String {
         let size = url.fileSize.formattedFileSize
         switch kind {
@@ -146,6 +176,9 @@ enum UniversalConverter {
         case .video, .audio:
             guard let seconds = try? await AVURLAsset(url: url).load(.duration).seconds, seconds.isFinite else { return size }
             return "\(Int(seconds) / 60):\(String(format: "%02d", Int(seconds) % 60)) · \(size)"
+        case .table:
+            let rows = (try? readTextFile(url)).map { CSV.parse($0, delimiter: url.pathExtension.lowercased() == "tsv" ? "\t" : nil) } ?? []
+            return "\(max(rows.count - 1, 0)) rows · \(rows.first?.count ?? 0) columns · \(size)"
         default:
             let type = UTType(filenameExtension: url.pathExtension)?.localizedDescription ?? url.pathExtension.uppercased()
             return "\(type) · \(size)"
@@ -158,54 +191,158 @@ enum UniversalConverter {
                         progress: @escaping (Int, Int) -> Void = { _, _ in }) async throws -> [OutputFile] {
         let name = url.deletingPathExtension().lastPathComponent
         switch kind {
-        case .pdf:
-            guard let doc = PDFDocument(url: url) else { throw PDFToolError.unreadable(url.lastPathComponent) }
-            if doc.isLocked { throw PDFToolError.message("\"\(url.lastPathComponent)\" is password protected. Unlock it first with Unlock PDF.") }
-            return try fromPDF(doc, name: name, to: target, quality: quality, progress: progress)
+        case .video: return [try await convertVideo(url, name: name, to: target, quality: quality)]
+        case .audio: return [try convertAudio(url, name: name, to: target)]
+        case .unsupported: throw PDFToolError.message("This type of file can't be converted.")
+        default: break
+        }
 
-        case .image:
-            let image = try loadImage(url)
-            switch target {
-            case .pdf:
-                return [OutputFile(data: PDFService.imagesToPDF([UIImage(cgImage: image)], pageSize: .fit, margin: .none,
-                                                                quality: quality), name: name, ext: "pdf")]
-            case .txt, .docx:
-                let text = OCRService.text(of: try OCRService.recognize(UIImage(cgImage: image)))
-                guard !text.isEmpty else { throw PDFToolError.message("No text was found in this image.") }
-                return [textOutput(text, name: name, as: target)]
-            default:
-                return [OutputFile(data: try encode(image, as: target, quality: quality), name: name, ext: target.ext)]
+        if target == .pdf {
+            return [OutputFile(data: try await pdfData(url, kind: kind, name: name, progress: progress), name: name, ext: "pdf")]
+        }
+        if target.imageType != nil {
+            if kind == .image {
+                return [OutputFile(data: try encode(try loadImage(url), as: target, quality: quality), name: name, ext: target.ext)]
             }
+            let pdf = try await pdfData(url, kind: kind, name: name, progress: progress)
+            guard let doc = PDFDocument(data: pdf) else { throw PDFToolError.unreadable(url.lastPathComponent) }
+            return try pages(of: doc, name: name, as: target, quality: quality, progress: progress)
+        }
 
+        let document = try await self.document(url, kind: kind, name: name, progress: progress)
+        return [try write(document, as: target, name: name)]
+    }
+
+    /// Reads any text-bearing file into the common document structure.
+    static func document(_ url: URL, kind: FileKind, name: String,
+                         progress: @escaping (Int, Int) -> Void = { _, _ in }) async throws -> RichDocument {
+        let document: RichDocument
+        let ext = url.pathExtension.lowercased()
+        switch kind {
+        case .markdown:
+            document = Markdown.parse(try readTextFile(url), title: name)
+        case .text:
+            if ext == "rtf" {
+                let attributed = try NSAttributedString(url: url, options: [.documentType: NSAttributedString.DocumentType.rtf],
+                                                        documentAttributes: nil)
+                document = RichDocument.plain(attributed.string, title: name)
+            } else if ["xml", "yaml", "yml", "ini", "conf", "log"].contains(ext) {
+                document = RichDocument(title: name, blocks: [.code(try readTextFile(url))])
+            } else {
+                document = RichDocument.plain(try readTextFile(url), title: name)
+            }
+        case .table:
+            let rows = CSV.parse(try readTextFile(url), delimiter: ext == "tsv" ? "\t" : nil)
+            document = RichDocument(title: name, blocks: rows.isEmpty ? [] : [.table(rows)])
+        case .json:
+            let data = try Data(contentsOf: url)
+            if let rows = JSONTable.table(from: data) {
+                document = RichDocument(title: name, blocks: [.table(rows)])
+            } else if let pretty = JSONTable.prettyPrinted(data) {
+                document = RichDocument(title: name, blocks: [.code(pretty)])
+            } else {
+                throw PDFToolError.message("\"\(url.lastPathComponent)\" is not valid JSON.")
+            }
+        case .word:
+            document = try DocxReader.read(try Data(contentsOf: url), title: name)
+        case .spreadsheet:
+            let sheets = try XlsxReader.read(try Data(contentsOf: url))
+            var blocks: [DocBlock] = []
+            for sheet in sheets {
+                if sheets.count > 1 { blocks.append(.heading(level: 2, runs: [TextRun(text: sheet.name)])) }
+                blocks.append(.table(sheet.rows))
+            }
+            document = RichDocument(title: name, blocks: blocks)
+        case .presentation:
+            document = try PptxReader.read(try Data(contentsOf: url), title: name)
+        case .pdf:
+            guard let pdf = PDFDocument(url: url) else { throw PDFToolError.unreadable(url.lastPathComponent) }
+            if pdf.isLocked { throw locked(url) }
+            document = RichDocument.pages(try TextExtractor.pages(of: pdf, useOCR: true, progress: progress), title: name)
+        case .image:
+            let text = OCRService.text(of: try OCRService.recognize(UIImage(cgImage: try loadImage(url))))
+            document = RichDocument.plain(text, title: name)
         case .office, .web:
             let pdf = try await WebPDFRenderer.pdf(fromFile: url, paper: .a4)
-            if target == .pdf { return [OutputFile(data: pdf, name: name, ext: "pdf")] }
             guard let doc = PDFDocument(data: pdf) else { throw PDFToolError.unreadable(url.lastPathComponent) }
-            return try fromPDF(doc, name: name, to: target, quality: quality, progress: progress)
-
-        case .text:
-            switch target {
-            case .pdf, .jpg, .png:
-                let pdf = try await WebPDFRenderer.pdf(fromFile: url, paper: .a4)
-                if target == .pdf { return [OutputFile(data: pdf, name: name, ext: "pdf")] }
-                guard let doc = PDFDocument(data: pdf) else { throw PDFToolError.unreadable(url.lastPathComponent) }
-                return try fromPDF(doc, name: name, to: target, quality: quality, progress: progress)
-            case .rtf:
-                let attributed = try readAttributed(url)
-                let data = try attributed.data(from: NSRange(location: 0, length: attributed.length),
-                                               documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf])
-                return [OutputFile(data: data, name: name, ext: "rtf")]
-            default:
-                return [textOutput(try readAttributed(url).string, name: name, as: target)]
-            }
-
-        case .video:
-            return [try await convertVideo(url, name: name, to: target)]
-        case .audio:
-            return [try convertAudio(url, name: name, to: target)]
-        case .unsupported:
-            throw PDFToolError.message("This type of file can't be converted.")
+            document = RichDocument.pages(try TextExtractor.pages(of: doc, useOCR: true, progress: progress), title: name)
+        case .video, .audio, .unsupported:
+            throw PDFToolError.message("This file has no text to convert.")
         }
+        guard document.hasText else { throw PDFToolError.message("No text was found in \"\(url.lastPathComponent)\".") }
+        return document
+    }
+
+    static func write(_ document: RichDocument, as target: TargetFormat, name: String) throws -> OutputFile {
+        if target.needsTable, document.tables.isEmpty {
+            throw PDFToolError.message("\(target.title) needs a table, and none was found in this file.")
+        }
+        let data: Data
+        switch target {
+        case .docx: data = DocxWriter.document(document)
+        case .md: data = Data(Markdown.write(document).utf8)
+        case .html: data = Data(HTMLWriter.write(document).utf8)
+        case .rtf: data = try RTFWriter.write(document)
+        case .txt: data = Data(PlainTextWriter.write(document).utf8)
+        case .csv: data = CSV.write(document.tables[0])
+        case .json: data = JSONTable.json(from: document.tables[0])
+        case .xlsx:
+            let tables = document.tables
+            data = XlsxWriter.workbook(tables.enumerated().map { (tables.count == 1 ? name : "Sheet\($0 + 1)", $1) })
+        default: throw PDFToolError.message("\(target.title) is not a document format.")
+        }
+        return OutputFile(data: data, name: name, ext: target.ext)
+    }
+
+    /// A PDF that looks as close to the original as possible.
+    static func pdfData(_ url: URL, kind: FileKind, name: String,
+                        progress: @escaping (Int, Int) -> Void = { _, _ in }) async throws -> Data {
+        switch kind {
+        case .pdf:
+            guard let doc = PDFDocument(url: url) else { throw PDFToolError.unreadable(url.lastPathComponent) }
+            if doc.isLocked { throw locked(url) }
+            return try Data(contentsOf: url)
+        case .image:
+            return PDFService.imagesToPDF([UIImage(cgImage: try loadImage(url))], pageSize: .fit, margin: .none)
+        case .office, .web:
+            return try await WebPDFRenderer.pdf(fromFile: url, paper: .a4)
+        case .word, .spreadsheet, .presentation:
+            // WebKit renders Office files with their original layout; fall back to the parsed content.
+            if let pdf = try? await WebPDFRenderer.pdf(fromFile: url, paper: .a4),
+               let doc = PDFDocument(data: pdf), doc.pageCount > 0, (doc.string ?? "").count > 3 {
+                return pdf
+            }
+            return try await renderHTML(HTMLWriter.write(try await document(url, kind: kind, name: name)), name: name)
+        case .text where url.pathExtension.lowercased() == "rtf":
+            return try await WebPDFRenderer.pdf(fromFile: url, paper: .a4)
+        default:
+            return try await renderHTML(HTMLWriter.write(try await document(url, kind: kind, name: name, progress: progress)), name: name)
+        }
+    }
+
+    private static func renderHTML(_ html: String, name: String) async throws -> Data {
+        let url = TempFiles.newURL(ext: "html")
+        try html.write(to: url, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: url) }
+        return try await WebPDFRenderer.pdf(fromFile: url, paper: .a4)
+    }
+
+    private static func locked(_ url: URL) -> Error {
+        PDFToolError.message("\"\(url.lastPathComponent)\" is password protected. Unlock it first with Unlock PDF.")
+    }
+
+    private static func pages(of doc: PDFDocument, name: String, as target: TargetFormat, quality: CGFloat,
+                              progress: @escaping (Int, Int) -> Void) throws -> [OutputFile] {
+        var outputs: [OutputFile] = []
+        for index in 0..<doc.pageCount {
+            progress(index + 1, doc.pageCount)
+            guard let page = doc.page(at: index) else { continue }
+            let data = try autoreleasepool {
+                try encode(PDFService.renderImage(page, scale: 2).cgImage!, as: target, quality: quality)
+            }
+            outputs.append(OutputFile(data: data, name: doc.pageCount == 1 ? name : "\(name)_page_\(index + 1)", ext: target.ext))
+        }
+        return outputs
     }
 
     /// Several images into one multi-page PDF.
@@ -213,81 +350,6 @@ enum UniversalConverter {
         let images = try urls.map { UIImage(cgImage: try loadImage($0)) }
         return OutputFile(data: PDFService.imagesToPDF(images, pageSize: .fit, margin: .none, quality: quality),
                           name: name, ext: "pdf")
-    }
-
-    private static func fromPDF(_ doc: PDFDocument, name: String, to target: TargetFormat, quality: CGFloat,
-                                progress: @escaping (Int, Int) -> Void) throws -> [OutputFile] {
-        if let _ = target.imageType {
-            var outputs: [OutputFile] = []
-            for index in 0..<doc.pageCount {
-                progress(index + 1, doc.pageCount)
-                guard let page = doc.page(at: index) else { continue }
-                let data = try autoreleasepool {
-                    try encode(PDFService.renderImage(page, scale: 2).cgImage!, as: target, quality: quality)
-                }
-                outputs.append(OutputFile(data: data, name: doc.pageCount == 1 ? name : "\(name)_page_\(index + 1)", ext: target.ext))
-            }
-            return outputs
-        }
-        let pages = try TextExtractor.pages(of: doc, useOCR: true, progress: progress)
-        guard pages.contains(where: { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
-            throw PDFToolError.message("No text was found in this document.")
-        }
-        switch target {
-        case .docx:
-            return [OutputFile(data: DocxWriter.document(pages: pages.map(TextExtractor.paragraphs)), name: name, ext: "docx")]
-        case .md:
-            return [OutputFile(data: Data(TextExtractor.markdown(title: name, pages: pages).utf8), name: name, ext: "md")]
-        case .rtf:
-            let text = pages.map { TextExtractor.paragraphs($0).joined(separator: "\n\n") }.joined(separator: "\n\u{0C}\n")
-            let attributed = NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: 12)])
-            let data = try attributed.data(from: NSRange(location: 0, length: attributed.length),
-                                           documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf])
-            return [OutputFile(data: data, name: name, ext: "rtf")]
-        case .html:
-            return [OutputFile(data: Data(html(title: name, pages: pages.map(TextExtractor.paragraphs)).utf8), name: name, ext: "html")]
-        default:
-            return [OutputFile(data: Data(TextExtractor.plainText(pages: pages).utf8), name: name, ext: "txt")]
-        }
-    }
-
-    private static func textOutput(_ text: String, name: String, as target: TargetFormat) -> OutputFile {
-        let lines = text.components(separatedBy: .newlines)
-        switch target {
-        case .docx: return OutputFile(data: DocxWriter.document(pages: [lines]), name: name, ext: "docx")
-        case .html: return OutputFile(data: Data(html(title: name, pages: [lines]).utf8), name: name, ext: "html")
-        default: return OutputFile(data: Data(text.utf8), name: name, ext: "txt")
-        }
-    }
-
-    static func html(title: String, pages: [[String]]) -> String {
-        func esc(_ s: String) -> String {
-            s.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
-                .replacingOccurrences(of: ">", with: "&gt;")
-        }
-        let body = pages.map { paragraphs in
-            paragraphs.filter { !$0.isEmpty }.map { "<p>\(esc($0))</p>" }.joined(separator: "\n")
-        }.joined(separator: "\n<hr>\n")
-        return """
-        <!doctype html>
-        <html><head><meta charset="utf-8"><title>\(esc(title))</title>
-        <style>body{font-family:-apple-system,Helvetica,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem;line-height:1.5}</style>
-        </head><body>
-        \(body)
-        </body></html>
-        """
-    }
-
-    private static func readAttributed(_ url: URL) throws -> NSAttributedString {
-        if url.pathExtension.lowercased() == "rtf" {
-            return try NSAttributedString(url: url, options: [.documentType: NSAttributedString.DocumentType.rtf],
-                                          documentAttributes: nil)
-        }
-        var encoding = String.Encoding.utf8
-        let text = (try? String(contentsOf: url, usedEncoding: &encoding))
-            ?? (try? String(contentsOf: url, encoding: .windowsCP1254))
-            ?? ""
-        return NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: 12)])
     }
 
     // MARK: Images
@@ -331,10 +393,25 @@ enum UniversalConverter {
 
     // MARK: Video & audio
 
-    private static func convertVideo(_ url: URL, name: String, to target: TargetFormat) async throws -> OutputFile {
+    private static func convertVideo(_ url: URL, name: String, to target: TargetFormat, quality: CGFloat) async throws -> OutputFile {
         let asset = AVURLAsset(url: url)
-        if target == .gif {
+        switch target {
+        case .gif:
             return OutputFile(data: try await gif(from: asset), name: name, ext: "gif")
+        case .jpg:
+            // A still from the middle of the first two seconds.
+            let duration = try await asset.load(.duration).seconds
+            let generator = AVAssetImageGenerator(asset: asset)
+            generator.appliesPreferredTrackTransform = true
+            let frame = try await generator.image(at: CMTime(seconds: min(1, duration / 2), preferredTimescale: 600)).image
+            return OutputFile(data: try encode(frame, as: .jpg, quality: quality), name: "\(name)_frame", ext: "jpg")
+        case .wav:
+            let m4a = try await convertVideo(url, name: name, to: .m4a, quality: quality)
+            guard let source = m4a.fileURL else { throw PDFToolError.message("The conversion failed.") }
+            defer { try? FileManager.default.removeItem(at: source) }
+            return try convertAudio(source, name: name, to: .wav)
+        default:
+            break
         }
         if target == .m4a, try await asset.loadTracks(withMediaType: .audio).isEmpty {
             throw PDFToolError.message("This video has no sound to extract.")
@@ -399,7 +476,7 @@ enum UniversalConverter {
         case .m4a:
             settings[AVFormatIDKey] = kAudioFormatMPEG4AAC
             settings[AVEncoderBitRateKey] = 192_000
-        case .wav, .aiff:
+        case .wav, .aiff, .caf:
             settings[AVFormatIDKey] = kAudioFormatLinearPCM
             settings[AVLinearPCMBitDepthKey] = 16
             settings[AVLinearPCMIsFloatKey] = false

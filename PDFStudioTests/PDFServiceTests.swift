@@ -219,7 +219,7 @@ final class PDFServiceTests: XCTestCase {
 
     func testDocxIsValidZipWithWellFormedXML() throws {
         let docx = DocxWriter.document(pages: [["Hello & <World>", "Ünicode çğış"], ["Second page"]])
-        let entries = try readStoredZip(docx)
+        let entries = try ZipReader(data: docx).entries
         XCTAssertEqual(Set(entries.keys), ["[Content_Types].xml", "_rels/.rels", "word/document.xml"])
         for (name, data) in entries {
             let parser = XMLParser(data: data)
@@ -229,32 +229,6 @@ final class PDFServiceTests: XCTestCase {
         XCTAssertTrue(xml.contains("Hello &amp; &lt;World&gt;"))
         XCTAssertTrue(xml.contains("Ünicode çğış"))
         XCTAssertTrue(xml.contains(#"w:type="page""#))
-    }
-
-    /// Reads a ZIP made of stored entries, verifying every CRC and the central directory.
-    private func readStoredZip(_ data: Data) throws -> [String: Data] {
-        let bytes = [UInt8](data)
-        func u16(_ o: Int) -> Int { Int(bytes[o]) | Int(bytes[o + 1]) << 8 }
-        func u32(_ o: Int) -> UInt32 { UInt32(bytes[o]) | UInt32(bytes[o + 1]) << 8 | UInt32(bytes[o + 2]) << 16 | UInt32(bytes[o + 3]) << 24 }
-        let eocd = bytes.count - 22
-        XCTAssertEqual(u32(eocd), 0x06054b50, "end of central directory")
-        let count = u16(eocd + 10)
-        var cd = Int(u32(eocd + 16))
-        var result: [String: Data] = [:]
-        for _ in 0..<count {
-            XCTAssertEqual(u32(cd), 0x02014b50)
-            let crc = u32(cd + 16), size = Int(u32(cd + 20))
-            let nameLength = u16(cd + 28), extra = u16(cd + 30), comment = u16(cd + 32)
-            let local = Int(u32(cd + 42))
-            let name = String(bytes: bytes[(cd + 46)..<(cd + 46 + nameLength)], encoding: .utf8)!
-            XCTAssertEqual(u32(local), 0x04034b50)
-            let start = local + 30 + u16(local + 26) + u16(local + 28)
-            let content = Data(bytes[start..<(start + size)])
-            XCTAssertEqual(CRC32.checksum(content), crc, "CRC of \(name)")
-            result[name] = content
-            cd += 46 + nameLength + extra + comment
-        }
-        return result
     }
 
     func testCRC32KnownValue() {
