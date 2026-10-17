@@ -1,0 +1,36 @@
+name: iOS Build & Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Pick an iPhone simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)['devices']
+          c=[x for r,v in d.items() if 'iOS' in r for x in v if x['name'].startswith('iPhone')]
+          print(c[-1]['udid'])")
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+      - name: Build and run unit + UI tests
+        run: |
+          set -o pipefail
+          xcodebuild test -project PDFStudio.xcodeproj -scheme PDFStudio \
+            -destination "id=$UDID" CODE_SIGNING_ALLOWED=NO 2>&1 | tee test.log \
+            | grep -E "error:|Test Case .*(passed|failed)|XCTAssert|Executed|TEST (SUCCEEDED|FAILED)|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "TEST SUCCEEDED" test.log
+      - name: Release build (device, unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild build -project PDFStudio.xcodeproj -scheme PDFStudio -configuration Release \
+            -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO 2>&1 | tail -3

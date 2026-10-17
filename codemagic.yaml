@@ -1,0 +1,81 @@
+workflows:
+  pdf-studio-ios:
+    name: PDF Studio — iOS (TestFlight)
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+
+    # Codemagic UI → Teams → Integrations → App Store Connect. The API key is account-wide,
+    # so the key already created for Slice & Blast works for this app too.
+    integrations:
+      app_store_connect: SliceBlast ASC Key
+
+    environment:
+      vars:
+        XCODE_PROJECT: PDFStudio.xcodeproj
+        XCODE_SCHEME: PDFStudio
+        BUNDLE_ID: com.javidalishov.pdfstudio
+      # Declarative signing, same as Slice & Blast: Codemagic installs the distribution
+      # certificate (.p12 already uploaded for the team) and the App Store profile for this
+      # bundle id before the scripts run. The profile must exist first — see README.
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.javidalishov.pdfstudio
+      xcode: "26.4"
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+
+    scripts:
+      - name: Set the build number
+        script: |
+          # Minutes since 2024 — always climbing, so TestFlight always offers the newest build
+          # as an update (Codemagic's own counter restarts per workflow).
+          BUILD_NUMBER=$(( ( $(date -u +%s) - 1704067200 ) / 60 ))
+          echo "CFBundleVersion = $BUILD_NUMBER"
+          sed -i '' "s/CURRENT_PROJECT_VERSION: \"[0-9]*\"/CURRENT_PROJECT_VERSION: \"$BUILD_NUMBER\"/" project.yml
+          grep CURRENT_PROJECT_VERSION project.yml
+
+      - name: Generate the Xcode project
+        script: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Resolve Swift packages (Google Mobile Ads, UMP)
+        script: |
+          xcodebuild -resolvePackageDependencies -project "$XCODE_PROJECT" -scheme "$XCODE_SCHEME"
+
+      - name: Apply provisioning profiles
+        script: xcode-project use-profiles --project "$XCODE_PROJECT"
+
+      - name: Build the .ipa
+        script: |
+          if ! xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"; then
+            ERRORS="$( (grep -h -E "error:|\*\* ARCHIVE FAILED \*\*|The following build commands failed" \
+              /tmp/xcodebuild_logs/*.log 2>/dev/null || true) | sort -u | head -80 )"
+            echo ""
+            echo "=================== xcodebuild errors ==================="
+            if [ -n "$ERRORS" ]; then
+              echo "$ERRORS"
+            else
+              echo "(no xcodebuild log was written — the failure happened before archiving began)"
+            fi
+            echo "========================================================="
+            exit 1
+          fi
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # A build stuck in beta review blocks every later submission with a 422 until it
+        # clears — expire it so the newest build always gets submitted.
+        expire_build_submitted_for_review: true

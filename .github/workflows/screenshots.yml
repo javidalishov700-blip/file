@@ -1,0 +1,66 @@
+name: Simulator Screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "PDFStudio/**"
+      - ".github/workflows/screenshots.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  screenshots:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Build for the simulator
+        run: |
+          set -o pipefail
+          xcodebuild -project PDFStudio.xcodeproj -scheme PDFStudio -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tail -3
+      - name: Capture screens (App Store sizes)
+        run: |
+          APP=$(find build/Build/Products -name "PDFStudio.app" -maxdepth 3 | head -1)
+          # 6.9" iPhone (Pro Max, 1320x2868 / 1290x2796) and 13" iPad (2064x2752) are the sizes
+          # App Store Connect requires.
+          for kind in iphone ipad; do
+            UDID=$(xcrun simctl list devices available -j | KIND=$kind python3 -c "
+          import json,os,sys
+          d=json.load(sys.stdin)['devices']
+          devs=[x for r,v in d.items() if 'iOS' in r for x in v]
+          if os.environ['KIND']=='iphone':
+              c=[x for x in devs if x['name'].startswith('iPhone') and 'Pro Max' in x['name']]
+          else:
+              c=[x for x in devs if x['name'].startswith('iPad Pro') and '13' in x['name']]
+          print(c[-1]['udid'])")
+            echo "$kind -> $UDID"
+            xcrun simctl boot "$UDID"
+            xcrun simctl bootstatus "$UDID" -b
+            xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+            xcrun simctl install "$UDID" "$APP"
+            mkdir -p "screenshots/$kind"
+            for screen in home convert scan merge edit compress files settings; do
+              xcrun simctl terminate "$UDID" com.javidalishov.pdfstudio || true
+              arg="$screen"; [ "$screen" = home ] && arg="tools"
+              xcrun simctl launch "$UDID" com.javidalishov.pdfstudio -demoScreen "$arg"
+              sleep 8
+              xcrun simctl io "$UDID" screenshot "screenshots/$kind/$screen.png"
+            done
+            xcrun simctl shutdown "$UDID"
+          done
+          find screenshots -name "*.png" | sort
+      - name: Publish to the screenshots branch
+        run: |
+          cd screenshots
+          git init -q -b screenshots
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -qm "Screenshots from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" screenshots

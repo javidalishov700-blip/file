@@ -1,0 +1,90 @@
+name: PDFStudio
+options:
+  bundleIdPrefix: com.javidalishov
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+packages:
+  GoogleMobileAds:
+    url: https://github.com/googleads/swift-package-manager-google-mobile-ads
+    from: "12.0.0"
+  GoogleUserMessagingPlatform:
+    url: https://github.com/googleads/swift-package-manager-google-user-messaging-platform
+    from: "3.0.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  PDFStudio:
+    type: application
+    platform: iOS
+    sources:
+      - path: PDFStudio
+    dependencies:
+      - package: GoogleMobileAds
+      - package: GoogleUserMessagingPlatform
+    settings:
+      base:
+        PRODUCT_NAME: PDFStudio
+        PRODUCT_BUNDLE_IDENTIFIER: com.javidalishov.pdfstudio
+        INFOPLIST_FILE: Config/Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Automatic
+        # Set your Apple Developer Team ID here (or pick it in Xcode > Signing & Capabilities)
+        DEVELOPMENT_TEAM: ""
+        ENABLE_PREVIEWS: YES
+        OTHER_LDFLAGS: ["$(inherited)", "-ObjC"]
+        # AdMob (Info.plist reads these). The defaults are Google's public TEST ids, which
+        # always fill and pay nothing. Replace them with the PDF Studio app's real ids from
+        # admob.google.com → Apps → PDF Studio (App ID uses "~", ad units use "/").
+        ADMOB_APP_ID: ca-app-pub-3940256099942544~1458002511
+        ADMOB_BANNER_UNIT_ID: ca-app-pub-3940256099942544/2435281174
+        ADMOB_INTERSTITIAL_UNIT_ID: ca-app-pub-3940256099942544/4411468910
+
+  PDFStudioTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PDFStudioTests
+    dependencies:
+      - target: PDFStudio
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.javidalishov.pdfstudio.tests
+
+  PDFStudioUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: PDFStudioUITests
+    dependencies:
+      - target: PDFStudio
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.javidalishov.pdfstudio.uitests
+        TEST_TARGET_NAME: PDFStudio
+
+schemes:
+  PDFStudio:
+    build:
+      targets:
+        PDFStudio: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - PDFStudioTests
+        - PDFStudioUITests
+    archive:
+      config: Release
